@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>チーグー テストチャット</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    #chat-log { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    .user-msg { color: blue; }
+    .bot-msg { color: green; }
+    #char-img { display: block; margin: 10px 0; height: 200px; }
+  </style>
+</head>
+<body>
+  <h1>チーグー テストチャット</h1>
+
+  <!-- ✅ キャラ画像 -->
+  <img id="char-img" src="static/images/hkg/初期.gif" alt="キャラ画像" />
+
+  <!-- ✅ 入力フォーム（チャットログの上） -->
+  <form id="chat-form" autocomplete="off">
+    <select id="char">
+      <option value="hkg">ヒカゲ</option>
+      <option value="mym">モヤモ</option>
+      <option value="drk">デレコ</option>
+      <option value="crw">クロウ</option>
+      <option value="gto">ゴトオ</option>
+      <option value="cmi">ちゃみ</option>
+      <option value="pny">ぽにょ子</option>
+      <option value="otm">ヲタ丸くん</option>
+    </select>
+    <input type="text" id="user-input" placeholder="グチってください..." />
+    <button type="submit">送信</button>
+  </form>
+
+  <!-- ✅ チャットログ -->
+  <div id="chat-log"></div>
+
+  <script>
+    // ✅ UID を localStorage に保存
+    let uid = localStorage.getItem("uid");
+    if (!uid) {
+      uid = "uid-" + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem("uid", uid);
+    }
+
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('user-input');
+    const chatLog = document.getElementById('chat-log');
+    const charSelect = document.getElementById('char');
+    const charImg = document.getElementById('char-img');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userInput = input.value.trim();
+      if (!userInput) return;
+
+      const char = charSelect.value;
+      appendMessage('user', userInput);
+
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: userInput, char: char, uid: uid })
+      });
+
+      const data = await response.json();
+      appendMessage('bot', data.reply);
+      if (data.img) {
+        charImg.src = data.img;
+      }
+      input.value = '';
+    });
+
+    function appendMessage(sender, text) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = sender === 'user' ? 'user-msg' : 'bot-msg';
+      msgDiv.textContent = text;
+      chatLog.appendChild(msgDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+  </script>
+</body>
+</html>
