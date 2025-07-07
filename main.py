@@ -39,7 +39,6 @@ def chat():
     char_key = data.get("char", "hikage").lower()
     uid = data.get("uid", "user").strip()
 
-    # キャラ設定取得
     char_cfg = characters.characters.get(char_key, characters.characters["hikage"])
     stage = "初期"
     sys_prompt = char_cfg["stages"][stage]["system"]
@@ -55,7 +54,7 @@ def chat():
     except Exception as e:
         reply = f"⚠ エラー: {str(e)}"
 
-    # 育成ログ保存
+    got_gp = False
     try:
         log_ws = get_sheet(LOG_SHEET)
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -63,20 +62,14 @@ def chat():
     except Exception as e:
         print("⚠ 育成ログ保存失敗:", e)
 
-    # 育成ステータス更新
-    today = datetime.date.today()
-    got_gp = False
     try:
         stat_ws = get_sheet(STATUS_SHEET)
+        today = datetime.date.today()
         cell = stat_ws.find(uid)
 
         if cell is None:
-            # 新規ユーザ登録
-            try:
-                stat_ws.append_row([uid, char_key, stage, today.isoformat(), 1, 1, 10, today.isoformat()])
-                got_gp = True
-            except Exception as e:
-                print("⚠ 新規ユーザ登録失敗:", e)
+            stat_ws.append_row([uid, char_key, stage, today.isoformat(), 1, 1, 10, today.isoformat()])
+            got_gp = True
             reply += "\n（新規ユーザーとして登録されました）"
         else:
             row = cell.row
@@ -89,11 +82,8 @@ def chat():
             last_day = values[3] if len(values) > 3 else ""
 
             if last_day != today.isoformat():
-                if last_day:
-                    diff = (today - datetime.datetime.strptime(last_day, "%Y-%m-%d").date()).days
-                    streak = streak + 1 if diff == 1 else 1
-                else:
-                    streak = 1
+                diff = (today - datetime.datetime.strptime(last_day, "%Y-%m-%d").date()).days if last_day else 0
+                streak = streak + 1 if diff == 1 else 1
                 total += 1
                 last_day = today.isoformat()
 
@@ -103,7 +93,6 @@ def chat():
                 got_gp = True
 
             stat_ws.update(f"C{row}:H{row}", [[stage, last_day, streak, total, gp, last_gp_date]])
-
     except Exception as e:
         print("⚠ ステータス更新失敗:", e)
 
