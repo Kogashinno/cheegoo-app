@@ -528,3 +528,11 @@ characters = {
         }
     }
 }
+STAGE_RULES = {
+    "初期": {"min_gp": 0},
+    "中期": {"min_gp": 50},
+    "後期_陽": {"min_gp": 100, "positive_rate": 0.6},
+    "後期_陰": {"min_gp": 100, "positive_rate": 0.0},
+    "特別_キラキラ": {"min_gp": 150, "unlock_item": "覚醒"},
+    "特別_ヒカゲちゃん": {"min_gp": 150, "unlock_item": "特別進化"},
+}
