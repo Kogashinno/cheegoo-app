@@ -95,4 +95,5 @@ def chat():
         return jsonify({"reply": "エラーが発生したよ。ログを確認してね。"})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
