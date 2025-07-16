@@ -75,7 +75,7 @@ def chat():
 
         system_prompt = char_data["stages"][stage]["system"]
 
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel(model_name="models/gemini-pro")
         convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
         convo.send_message(user_text)
