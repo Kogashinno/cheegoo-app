@@ -92,17 +92,21 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期")
 
+        # --- ここから追加 ---
+        # user_textが空の場合は、エラーを返さず処理を中断
+        if not user_text.strip(): # strip()で空白のみの文字列も空とみなす
+            return jsonify({"reply": "何か入力してください。"})
+        # --- ここまで追加 ---
+
         char_data = characters.get(char_key)
         if not char_data:
             return jsonify({"reply": "キャラが見つからないよ。"})
 
         system_prompt = char_data["stages"][stage]["system"]
 
-        # `model`変数はグローバルで初期化されているので、ここで再度`GenerativeModel`を呼び出す必要はありません。
-        # ただし、確実性を期すため、ここでは`model`を使ってチャットを開始します。
-        convo = model.start_chat(history=[]) # グローバルな`model`変数を使用
+        convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
-        convo.send_message(user_text)
+        convo.send_message(user_text) # ここに到達する前に空文字チェック
         reply = convo.last.text.strip()
 
         sheet, status_sheet = get_gsheet()
