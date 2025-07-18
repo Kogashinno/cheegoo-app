@@ -7,12 +7,34 @@ import google.generativeai as genai
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-from characters import characters, STAGE_RULES
+# characters.pyからcharactersをインポートします。
+# STAGE_RULESについては、もしcharacters.pyに定義がない場合は別途追加が必要です。
+# 例として、このファイルの最後にSTAGE_RULESの定義を記載していますので、
+# 必要に応じてcharacters.pyに移動させてください。
+from characters import characters 
 
 app = Flask(__name__)
 
 # Gemini APIキー設定
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+
+# --- ここからデバッグ用の追加コード ---
+# 利用可能なGeminiモデルをリストして確認
+print("--- 利用可能なGeminiモデル一覧 ---")
+try:
+    for m in genai.list_models():
+        # generateContent メソッドをサポートしているモデルのみ表示
+        if "generateContent" in m.supported_generation_methods:
+            print(f"利用可能モデル: {m.name}")
+except Exception as e:
+    print(f"モデルリストの取得中にエラーが発生しました: {e}")
+print("--------------------------------")
+# --- ここまでデバッグ用の追加コード ---
+
+# Geminiモデルの初期化
+# あなたのコードに合わせて "models/gemini-pro" を指定します
+model = genai.GenerativeModel(model_name="models/gemini-pro")
+
 
 # スプレッドシート認証
 def get_gsheet():
@@ -75,8 +97,9 @@ def chat():
 
         system_prompt = char_data["stages"][stage]["system"]
 
-        model = genai.GenerativeModel(model_name="models/gemini-pro")
-        convo = model.start_chat(history=[])
+        # `model`変数はグローバルで初期化されているので、ここで再度`GenerativeModel`を呼び出す必要はありません。
+        # ただし、確実性を期すため、ここでは`model`を使ってチャットを開始します。
+        convo = model.start_chat(history=[]) # グローバルな`model`変数を使用
         convo.send_message(system_prompt)
         convo.send_message(user_text)
         reply = convo.last.text.strip()
@@ -97,5 +120,23 @@ def chat():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
+# --- STAGE_RULESの定義（もしcharacters.pyに定義がない場合） ---
+# もしcharacters.pyにSTAGE_RULESを移動させる場合は、このブロックは削除してください。
+# main.pyにSTAGE_RULESを置くのは、通常推奨されるプラクティスではありません。
+# characters.pyに置いて、そこからインポートするのがベストです。
+try:
+    from characters import STAGE_RULES
+except ImportError:
+    print("WARNING: STAGE_RULES was not found in characters.py. Using a default definition in main.py.")
+    STAGE_RULES = {
+        "初期": {"min_gp": 0, "condition": "誰でもここから。"},
+        "中期": {"min_gp": 30, "condition": "GP30以上、または3日連続グチ。"},
+        "後期_陽": {"min_gp": 60, "condition": "GP60以上、かつポジティブ率50%以上。"},
+        "後期_陰": {"min_gp": 60, "condition": "GP60以上、かつポジティブ率50%未満。"},
+        "特別_キラキラ": {"min_gp": 100, "condition": "後期ステージ到達、かつGP100以上。"},
+        "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
+    }
+# --- STAGE_RULESの定義ここまで ---
 
 
