@@ -470,6 +470,7 @@ characters = {
     } # Removed the extra '}' here. This now correctly closes the 'shr' dictionary.
 } # This correctly closes the 'characters' dictionary.
 
+# characters.py の一番最後あたりに追記
 STAGE_RULES = {
     "初期": {"min_gp": 0, "condition": "誰でもここから。"},
     "中期": {"min_gp": 30, "condition": "GP30以上、または3日連続グチ。"},
@@ -477,4 +478,5 @@ STAGE_RULES = {
     "後期_陰": {"min_gp": 60, "condition": "GP60以上、かつポジティブ率50%未満。"},
     "特別_キラキラ": {"min_gp": 100, "condition": "後期ステージ到達、かつGP100以上。"},
     "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
+    
 }
