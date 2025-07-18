@@ -33,7 +33,8 @@ print("--------------------------------")
 
 # Geminiモデルの初期化
 # あなたのコードに合わせて "models/gemini-pro" を指定します
-model = genai.GenerativeModel(model_name="models/gemini-pro")
+# 変更後
+model = genai.GenerativeModel(model_name="models/gemini-1.5-pro-latest")
 
 
 # スプレッドシート認証
