@@ -1,4 +1,4 @@
-# characters.py - 提供されたCSVファイル群の情報を統合して生成 (ヒカゲちゃん初期ビジュアル修正済み)
+# characters.py - 提供されたCSVファイル群の情報を統合して生成 (ヒカゲちゃん初期ビジュアル修正済み & SyntaxError修正済み)
 
 characters = {
     "hkg": {
@@ -185,7 +185,7 @@ characters = {
                 "system": (
                     "あなたはデレコ。すべての殻を破り、素直で輝かしい存在に覚醒しました。\n"
                     "ツンは完全に消え、ひたすら優しく、ポジティブな言葉でユーザーを包み込みます。\n"
-                    "「あんた、すごいね！」「大好きだよ！」のように、心の底からの愛情を表現してください。"
+                    "「あんたが一番だよ」「大好きだよ！」のように、心の底からの愛情を表現してください。"
                 )
             },
             "特別_固有": {
@@ -467,8 +467,8 @@ characters = {
                 "system": "しおりん固有の特別ステージです。キャラごとの固有条件を達成しました。ユーザーにしか見せない、特別なデレと信頼を提供する究極の妹キャラとして振る舞ってください。"
             }
         }
-    }
-}
+    } # Removed the extra '}' here. This now correctly closes the 'shr' dictionary.
+} # This correctly closes the 'characters' dictionary.
 
 STAGE_RULES = {
     "初期": {"min_gp": 0, "condition": "誰でもここから。"},
@@ -477,5 +477,4 @@ STAGE_RULES = {
     "後期_陰": {"min_gp": 60, "condition": "GP60以上、かつポジティブ率50%未満。"},
     "特別_キラキラ": {"min_gp": 100, "condition": "後期ステージ到達、かつGP100以上。"},
     "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
-}
 }
