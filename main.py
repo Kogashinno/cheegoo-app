@@ -91,14 +91,20 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期")
 
-        # --- ここを修正しました ---
+        # --- ここから追加/変更 ---
+        # 受信したuser_textの中身をそのままログに出力して確認
+        print(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
+
         # user_textから全角・半角スペース、改行などを全て取り除く
         user_text = "".join(user_text.split()) 
         
+        # 空白除去後のuser_textの中身をログに出力して確認
+        print(f"--- 処理後のuser_text ---: '{user_text}' (長さ: {len(user_text)})")
+
         # user_textが空の場合は、エラーを返さず処理を中断
-        if not user_text: # .strip()を使わず、完全に空になったかを確認
+        if not user_text: 
             return jsonify({"reply": "何か入力してください。"})
-        # --- 修正ここまで ---
+        # --- 変更ここまで ---
 
         char_data = characters.get(char_key)
         if not char_data:
