@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 import traceback
+import logging # loggingモジュールをインポート
 from flask import Flask, request, jsonify, render_template
 import google.generativeai as genai
 import gspread
@@ -15,20 +16,30 @@ from characters import characters
 
 app = Flask(__name__)
 
+# --- ロギング設定の追加 ---
+# ロガーのレベルを設定 (INFOレベル以上のログを出力)
+app.logger.setLevel(logging.INFO)
+# コンソールにもログを出力するようにハンドラを設定（Renderはこれを拾います）
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
+# --- ロギング設定ここまで ---
+
 # Gemini APIキー設定
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 # --- ここからデバッグ用の追加コード ---
 # 利用可能なGeminiモデルをリストして確認
-print("--- 利用可能なGeminiモデル一覧 ---")
+app.logger.info("--- 利用可能なGeminiモデル一覧 ---")
 try:
     for m in genai.list_models():
         # generateContent メソッドをサポートしているモデルのみ表示
         if "generateContent" in m.supported_generation_methods:
-            print(f"利用可能モデル: {m.name}")
+            app.logger.info(f"利用可能モデル: {m.name}")
 except Exception as e:
-    print(f"モデルリストの取得中にエラーが発生しました: {e}")
-print("--------------------------------")
+    app.logger.error(f"モデルリストの取得中にエラーが発生しました: {e}")
+app.logger.info("--------------------------------")
 # --- ここまでデバッグ用の追加コード ---
 
 # Geminiモデルの初期化
@@ -47,7 +58,7 @@ def get_gsheet():
         status = client.open("育成ログ").worksheet("育成ステータス")
         return sheet, status
     except Exception as e:
-        print("スプレッドシート接続エラー:", str(e))
+        app.logger.error("スプレッドシート接続エラー: %s", str(e))
         traceback.print_exc()
         return None, None
 
@@ -56,7 +67,7 @@ def write_log(sheet, data):
     try:
         sheet.append_row(data)
     except Exception as e:
-        print("ログ書き込み失敗:", str(e))
+        app.logger.error("ログ書き込み失敗: %s", str(e))
         traceback.print_exc()
 
 # GP加算・ステータス更新
@@ -75,7 +86,7 @@ def update_status(status_sheet, uid, char_key):
         # 新規ユーザー
         status_sheet.append_row([uid, 10, char_key, "初期", today, 1, 1])
     except Exception as e:
-        print("ステータス更新エラー:", str(e))
+        app.logger.error("ステータス更新エラー: %s", str(e))
         traceback.print_exc()
 
 @app.route("/")
@@ -91,20 +102,20 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期")
 
-        # --- ここから追加/変更 ---
+        # --- ここを修正しました（loggingを使用） ---
         # 受信したuser_textの中身をそのままログに出力して確認
-        print(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
+        app.logger.info(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
 
         # user_textから全角・半角スペース、改行などを全て取り除く
         user_text = "".join(user_text.split()) 
         
         # 空白除去後のuser_textの中身をログに出力して確認
-        print(f"--- 処理後のuser_text ---: '{user_text}' (長さ: {len(user_text)})")
+        app.logger.info(f"--- 処理後のuser_text ---: '{user_text}' (長さ: {len(user_text)})")
 
         # user_textが空の場合は、エラーを返さず処理を中断
         if not user_text: 
             return jsonify({"reply": "何か入力してください。"})
-        # --- 変更ここまで ---
+        # --- 修正ここまで ---
 
         char_data = characters.get(char_key)
         if not char_data:
@@ -126,7 +137,7 @@ def chat():
 
         return jsonify({"reply": reply})
     except Exception as e:
-        print("全体処理エラー:", str(e))
+        app.logger.error("全体処理エラー: %s", str(e))
         traceback.print_exc()
         return jsonify({"reply": "エラーが発生したよ。ログを確認してね。"})
 
@@ -141,7 +152,7 @@ if __name__ == "__main__":
 try:
     from characters import STAGE_RULES
 except ImportError:
-    print("WARNING: STAGE_RULES was not found in characters.py. Using a default definition in main.py.")
+    app.logger.warning("STAGE_RULES was not found in characters.py. Using a default definition in main.py.")
     STAGE_RULES = {
         "初期": {"min_gp": 0, "condition": "誰でもここから。"},
         "中期": {"min_gp": 30, "condition": "GP30以上、または3日連続グチ。"},
