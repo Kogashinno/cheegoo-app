@@ -32,8 +32,7 @@ print("--------------------------------")
 # --- ここまでデバッグ用の追加コード ---
 
 # Geminiモデルの初期化
-# あなたのコードに合わせて "models/gemini-pro" を指定します
-# 変更後
+# ログで確認できた利用可能なモデル名を使用します。
 model = genai.GenerativeModel(model_name="models/gemini-1.5-pro-latest")
 
 
@@ -92,11 +91,14 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期")
 
-        # --- ここから追加 ---
+        # --- ここを修正しました ---
+        # user_textから全角・半角スペース、改行などを全て取り除く
+        user_text = "".join(user_text.split()) 
+        
         # user_textが空の場合は、エラーを返さず処理を中断
-        if not user_text.strip(): # strip()で空白のみの文字列も空とみなす
+        if not user_text: # .strip()を使わず、完全に空になったかを確認
             return jsonify({"reply": "何か入力してください。"})
-        # --- ここまで追加 ---
+        # --- 修正ここまで ---
 
         char_data = characters.get(char_key)
         if not char_data:
@@ -106,7 +108,7 @@ def chat():
 
         convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
-        convo.send_message(user_text) # ここに到達する前に空文字チェック
+        convo.send_message(user_text) 
         reply = convo.last.text.strip()
 
         sheet, status_sheet = get_gsheet()
@@ -143,5 +145,6 @@ except ImportError:
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
 # --- STAGE_RULESの定義ここまで ---
+
 
 
