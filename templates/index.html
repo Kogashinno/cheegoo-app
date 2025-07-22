@@ -52,8 +52,8 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const userInput = input.value.trim();
-      if (!userInput) return;
+      const userInput = input.value.trim(); // ここで空白を除去
+      if (!userInput) return; // 空なら送信しない
 
       const char = charSelect.value;
       appendMessage('user', userInput);
@@ -61,7 +61,7 @@
       const response = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: userInput, char: char, uid: uid })
+        body: JSON.stringify({ user_text: userInput, char: char, uid: uid }) // ここを 'user_text' に修正！
       });
 
       const data = await response.json();
@@ -82,3 +82,4 @@
   </script>
 </body>
 </html>
+
