@@ -8,11 +8,10 @@ import google.generativeai as genai
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# characters.pyからcharactersをインポートします。
-# STAGE_RULESについては、もしcharacters.pyに定義がない場合は別途追加が必要です。
-# 例として、このファイルの最後にSTAGE_RULESの定義を記載していますので、
-# 必要に応じてcharacters.pyに移動させてください。
-from characters import characters 
+# characters.pyからcharactersとSTAGE_RULESをインポートします。
+# STAGE_RULESがcharacters.pyに定義されていることを推奨します。
+# もしcharacters.pyに定義がない場合は、このファイルの最後にあるデフォルト定義が使用されます。
+from characters import characters, STAGE_RULES 
 
 app = Flask(__name__)
 
@@ -79,12 +78,29 @@ def update_status(status_sheet, uid, char_key):
             if row["uid"] == uid:
                 last_date = row["最終グチ日"]
                 if last_date != today:
+                    # 既存ユーザーのGPと最終グチ日を更新
                     gp = int(row["GP"]) + 10
-                    status_sheet.update_cell(i, 2, gp)  # GP列
+                    # 列のインデックスはスプレッドシートの実際の列順に合わせる
+                    # 画像から7列目: GP, 4列目: 最終グチ日 と推測
+                    status_sheet.update_cell(i, 7, gp)  # GP列
                     status_sheet.update_cell(i, 4, today)  # 最終グチ日列
+                # グチ回数も更新する場合
+                # gutsu_count = int(row["グチ回数"]) + 1
+                # status_sheet.update_cell(i, 5, gutsu_count) # グチ回数 (画像から5列目と推測)
                 return
         # 新規ユーザー
-        status_sheet.append_row([uid, 10, char_key, "初期", today, 1, 1])
+        # スプレッドシートの列順に合わせてデータを追加
+        # 列: uid, char_key, 開始ステージ, 最終グチ日, グチ回数, ポチ数, GP
+        new_user_data = [
+            uid,           # uid (1列目)
+            char_key,      # char_key (2列目)
+            "初期",        # 開始ステージ (3列目)
+            today,         # 最終グチ日 (4列目)
+            1,             # グチ回数 (5列目) - 初回なので1
+            1,             # ポチ数 (6列目) - 初回なので1 (もし不要なら0)
+            10             # GP (7列目) - 初回なので10
+        ]
+        status_sheet.append_row(new_user_data)
     except Exception as e:
         app.logger.error("ステータス更新エラー: %s", str(e))
         traceback.print_exc()
@@ -102,20 +118,18 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期")
 
-        # --- ここを修正しました（loggingを使用） ---
-        # 受信したuser_textの中身をそのままログに出力して確認
-        app.logger.info(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
-
         # user_textから全角・半角スペース、改行などを全て取り除く
         user_text = "".join(user_text.split()) 
         
+        # 受信したuser_textの中身をそのままログに出力して確認
+        app.logger.info(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
+
         # 空白除去後のuser_textの中身をログに出力して確認
         app.logger.info(f"--- 処理後のuser_text ---: '{user_text}' (長さ: {len(user_text)})")
 
         # user_textが空の場合は、エラーを返さず処理を中断
         if not user_text: 
             return jsonify({"reply": "何か入力してください。"})
-        # --- 修正ここまで ---
 
         char_data = characters.get(char_key)
         if not char_data:
@@ -146,12 +160,16 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port)
 
 # --- STAGE_RULESの定義（もしcharacters.pyに定義がない場合） ---
-# もしcharacters.pyにSTAGE_RULESを移動させる場合は、このブロックは削除してください。
+# characters.pyにSTAGE_RULESを移動させる場合は、このブロックは削除してください。
 # main.pyにSTAGE_RULESを置くのは、通常推奨されるプラクティスではありません。
 # characters.pyに置いて、そこからインポートするのがベストです。
+# ただし、characters.pyからインポートできない場合のフォールバックとして残します。
 try:
-    from characters import STAGE_RULES
+    # 既に最上部でインポートを試みているので、ここでは追加のインポートは不要
+    # from characters import STAGE_RULES # この行は重複するのでコメントアウト
+    pass # 何もしない
 except ImportError:
+    # STAGE_RULESがcharacters.pyに見つからなかった場合のデフォルト定義
     app.logger.warning("STAGE_RULES was not found in characters.py. Using a default definition in main.py.")
     STAGE_RULES = {
         "初期": {"min_gp": 0, "condition": "誰でもここから。"},
@@ -162,6 +180,7 @@ except ImportError:
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
 # --- STAGE_RULESの定義ここまで ---
+
 
 
 
