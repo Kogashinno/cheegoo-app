@@ -74,33 +74,51 @@ def update_status(status_sheet, uid, char_key):
     try:
         records = status_sheet.get_all_records()
         today = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # 既存ユーザーのデータを検索
+        user_found = False
         for i, row in enumerate(records, start=2): # ヘッダー行を考慮して2から開始
-            if row["uid"] == uid:
-                last_date = row["最終グチ日"]
-                if last_date != today:
-                    # 既存ユーザーのGPと最終グチ日を更新
-                    gp = int(row["GP"]) + 10
-                    # 列のインデックスはスプレッドシートの実際の列順に合わせる (1から始まる)
-                    # GPはG列なので7、最終グチ日はD列なので4
-                    status_sheet.update_cell(i, 7, gp)  # GP列 (G列)
-                    status_sheet.update_cell(i, 4, today)  # 最終グチ日列 (D列)
-                # グチ回数も更新する場合 (もし必要ならコメントアウトを外す)
-                # gutsu_count = int(row["グチ回数"]) + 1
-                # status_sheet.update_cell(i, 5, gutsu_count) # グチ回数 (E列)
-                return
+            if str(row.get("uid")) == str(uid): # uidは文字列として比較
+                user_found = True
+                
+                # スプレッドシートの列名と対応するPythonのキーを使用
+                current_gp = int(row.get("GP", 0)) # GPがない場合は0として扱う
+                last_grumble_date = row.get("最終グチ日")
+                consecutive_grumble_days = int(row.get("グチ連続日数", 0))
+                total_grumble_count = int(row.get("総グチ数", 0))
+                
+                # GP加算（日付が変わった場合のみ）
+                if last_grumble_date != today:
+                    current_gp += 10
+                    consecutive_grumble_days += 1 # 連続グチ日数を加算
+                    # GPと最終グチ日、グチ連続日数、最終GP付与日を更新
+                    status_sheet.update_cell(i, 7, current_gp)  # GP列 (G列)
+                    status_sheet.update_cell(i, 4, today)      # 最終グチ日列 (D列)
+                    status_sheet.update_cell(i, 5, consecutive_grumble_days) # グチ連続日数 (E列)
+                    status_sheet.update_cell(i, 8, today)      # 最終GP付与日列 (H列)
+                
+                total_grumble_count += 1 # 総グチ数は毎回加算
+                status_sheet.update_cell(i, 6, total_grumble_count) # 総グチ数 (F列)
+                
+                # 現在ステージの更新ロジックは別途実装が必要
+                # 例: status_sheet.update_cell(i, 3, new_stage_value) # 現在ステージ (C列)
+                return # ユーザーが見つかり更新したら終了
+
         # 新規ユーザー
-        # スプレッドシートの列順に合わせてデータを追加
-        # 列: uid (A), char_key (B), 開始ステージ (C), 最終グチ日 (D), グチ回数 (E), ポチ数 (F), GP (G)
-        new_user_data = [
-            uid,           # A列
-            char_key,      # B列
-            "初期",        # C列
-            today,         # D列
-            1,             # E列 (初回なので1)
-            1,             # F列 (初回なので1、もし不要なら0)
-            10             # G列 (初回なので10)
-        ]
-        status_sheet.append_row(new_user_data)
+        if not user_found:
+            # スプレッドシートの列順に合わせてデータを追加
+            # 列: uid (A), char_key (B), 現在ステージ (C), 最終グチ日 (D), グチ連続日数 (E), 総グチ数 (F), GP (G), 最終GP付与日 (H)
+            new_user_data = [
+                uid,                   # A列
+                char_key,              # B列
+                "初期",                # C列 (現在ステージ)
+                today,                 # D列 (最終グチ日)
+                1,                     # E列 (グチ連続日数 - 初回なので1)
+                1,                     # F列 (総グチ数 - 初回なので1)
+                10,                    # G列 (GP - 初回なので10)
+                today                  # H列 (最終GP付与日 - 初回なので今日)
+            ]
+            status_sheet.append_row(new_user_data)
     except Exception as e:
         app.logger.error("ステータス更新エラー: %s", str(e))
         traceback.print_exc()
@@ -116,7 +134,7 @@ def chat():
         user_text = data.get("user_text", "")
         char_key = data.get("char", "hikage")
         uid = data.get("uid", "unknown")
-        stage = data.get("stage", "初期")
+        stage = data.get("stage", "初期") # フロントエンドからステージが送られてくる場合
 
         # user_textから全角・半角スペース、改行などを全て取り除く
         user_text = "".join(user_text.split()) 
@@ -135,13 +153,17 @@ def chat():
         if not char_data:
             return jsonify({"reply": "キャラが見つからないよ。"})
 
-        system_prompt = char_data["stages"][stage]["system"]
-
+        # 現在のステージのシステムプロンプトを取得
+        # stage変数がフロントエンドから送られてくることを前提
+        system_prompt = char_data["stages"].get(stage, char_data["stages"]["初期"])["system"]
+        
+        # chat履歴を初期化してGeminiに送信
         convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
         convo.send_message(user_text) 
         reply = convo.last.text.strip()
 
+        # スプレッドシートへのログ書き込みとステータス更新
         sheet, status_sheet = get_gsheet()
         if sheet and status_sheet:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -166,8 +188,7 @@ if __name__ == "__main__":
 # ただし、characters.pyからインポートできない場合のフォールバックとして残します。
 try:
     # 既に最上部でインポートを試みているので、ここでは追加のインポートは不要
-    # from characters import STAGE_RULES # この行は重複するのでコメントアウト
-    pass # 何もしない
+    pass 
 except ImportError:
     # STAGE_RULESがcharacters.pyに見つからなかった場合のデフォルト定義
     app.logger.warning("STAGE_RULES was not found in characters.py. Using a default definition in main.py.")
@@ -180,6 +201,7 @@ except ImportError:
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
 # --- STAGE_RULESの定義ここまで ---
+
 
 
 
