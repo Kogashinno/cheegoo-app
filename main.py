@@ -74,31 +74,31 @@ def update_status(status_sheet, uid, char_key):
     try:
         records = status_sheet.get_all_records()
         today = datetime.datetime.now().strftime("%Y-%m-%d")
-        for i, row in enumerate(records, start=2):
+        for i, row in enumerate(records, start=2): # ヘッダー行を考慮して2から開始
             if row["uid"] == uid:
                 last_date = row["最終グチ日"]
                 if last_date != today:
                     # 既存ユーザーのGPと最終グチ日を更新
                     gp = int(row["GP"]) + 10
-                    # 列のインデックスはスプレッドシートの実際の列順に合わせる
-                    # 画像から7列目: GP, 4列目: 最終グチ日 と推測
-                    status_sheet.update_cell(i, 7, gp)  # GP列
-                    status_sheet.update_cell(i, 4, today)  # 最終グチ日列
-                # グチ回数も更新する場合
+                    # 列のインデックスはスプレッドシートの実際の列順に合わせる (1から始まる)
+                    # GPはG列なので7、最終グチ日はD列なので4
+                    status_sheet.update_cell(i, 7, gp)  # GP列 (G列)
+                    status_sheet.update_cell(i, 4, today)  # 最終グチ日列 (D列)
+                # グチ回数も更新する場合 (もし必要ならコメントアウトを外す)
                 # gutsu_count = int(row["グチ回数"]) + 1
-                # status_sheet.update_cell(i, 5, gutsu_count) # グチ回数 (画像から5列目と推測)
+                # status_sheet.update_cell(i, 5, gutsu_count) # グチ回数 (E列)
                 return
         # 新規ユーザー
         # スプレッドシートの列順に合わせてデータを追加
-        # 列: uid, char_key, 開始ステージ, 最終グチ日, グチ回数, ポチ数, GP
+        # 列: uid (A), char_key (B), 開始ステージ (C), 最終グチ日 (D), グチ回数 (E), ポチ数 (F), GP (G)
         new_user_data = [
-            uid,           # uid (1列目)
-            char_key,      # char_key (2列目)
-            "初期",        # 開始ステージ (3列目)
-            today,         # 最終グチ日 (4列目)
-            1,             # グチ回数 (5列目) - 初回なので1
-            1,             # ポチ数 (6列目) - 初回なので1 (もし不要なら0)
-            10             # GP (7列目) - 初回なので10
+            uid,           # A列
+            char_key,      # B列
+            "初期",        # C列
+            today,         # D列
+            1,             # E列 (初回なので1)
+            1,             # F列 (初回なので1、もし不要なら0)
+            10             # G列 (初回なので10)
         ]
         status_sheet.append_row(new_user_data)
     except Exception as e:
