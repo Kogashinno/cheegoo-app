@@ -84,19 +84,34 @@ def update_status(status_sheet, uid, char_key):
             sheet_uid = str(row.get("uid", "")).strip() # シートのUIDも文字列化して空白除去
             
             app.logger.info(f"  シート行 {i}: uid='{sheet_uid}', 比較対象uid='{uid}'")
-            
+            app.logger.info(f"  シート行 {i} の全データ: {row}") # 行の全データをログ出力
+
             if sheet_uid == str(uid).strip(): # uidは文字列として比較し、両方空白除去
                 user_found = True
                 app.logger.info(f"  ユーザー '{uid}' がシート行 {i} で見つかりました。")
                 
-                # スプレッドシートの列名と対応するPythonのキーを使用
-                # get(キー, デフォルト値) でキーが存在しない場合のエラーを避ける
-                current_gp = int(row.get("GP", 0)) 
+                # スプレッドシートの列名と対応するPythonのキーを使用し、安全にint変換
+                try:
+                    current_gp = int(row.get("GP", 0)) 
+                except ValueError:
+                    app.logger.warning(f"  GP列の値 '{row.get('GP')}' が無効です。0として扱います。")
+                    current_gp = 0
+
                 last_grumble_date = row.get("最終グチ日", "")
-                consecutive_grumble_days = int(row.get("グチ連続日数", 0))
-                total_grumble_count = int(row.get("総グチ数", 0))
                 
-                app.logger.info(f"  既存データ: GP={current_gp}, 最終グチ日='{last_grumble_date}', 連続日数={consecutive_grumble_days}, 総グチ数={total_grumble_count}")
+                try:
+                    consecutive_grumble_days = int(row.get("グチ連続日数", 0))
+                except ValueError:
+                    app.logger.warning(f"  グチ連続日数列の値 '{row.get('グチ連続日数')}' が無効です。0として扱います。")
+                    consecutive_grumble_days = 0
+                
+                try:
+                    total_grumble_count = int(row.get("総グチ数", 0))
+                except ValueError:
+                    app.logger.warning(f"  総グチ数列の値 '{row.get('総グチ数')}' が無効です。0として扱います。")
+                    total_grumble_count = 0
+                
+                app.logger.info(f"  既存データ取得: GP={current_gp}, 最終グチ日='{last_grumble_date}', 連続日数={consecutive_grumble_days}, 総グチ数={total_grumble_count}")
                 
                 # GP加算（日付が変わった場合のみ）
                 if last_grumble_date != today:
@@ -220,7 +235,6 @@ except ImportError:
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
 # --- STAGE_RULESの定義ここまで ---
-
 
 
 
