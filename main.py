@@ -133,6 +133,8 @@ def update_status(status_sheet, uid, char_key):
                 status_sheet.update_cell(i, 6, total_grumble_count) # 総グチ数 (F列)
                 app.logger.info(f"  更新後データ: GP={current_gp}, 最終グチ日='{today}', 連続日数={consecutive_grumble_days}, 総グチ数={total_grumble_count}")
                 
+                # 現在ステージの更新ロジックは別途実装が必要 (もしあれば)
+                # 例: status_sheet.update_cell(i, 3, new_stage_value) # 現在ステージ (C列)
                 return # ユーザーが見つかり更新したら終了
 
         # 新規ユーザー
@@ -192,10 +194,10 @@ def chat():
         base_system_prompt = char_data["stages"].get(stage, char_data["stages"]["初期"])["system"]
         
         # --- ここから修正 ---
-        # 動作描写と返信の長さを制御する指示を追加
+        # 動作描写と返信の長さを制御する指示を調整
         control_instructions = (
             "返信には、動作の描写（例: 「私は頷きながら」「彼は微笑んで」など）を含めないでください。\n"
-            "返信の長さは、通常の半分程度に短くしてください。簡潔にまとめてください。"
+            "簡潔さを保ちつつも、キャラクターの個性を損なわないように、適切な長さで返信してください。"
         )
         system_prompt = f"{base_system_prompt}\n\n{control_instructions}"
         # --- 修正ここまで ---
