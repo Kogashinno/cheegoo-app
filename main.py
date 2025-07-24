@@ -189,8 +189,17 @@ def chat():
 
         # 現在のステージのシステムプロンプトを取得
         # stage変数がフロントエンドから送られてくることを前提
-        system_prompt = char_data["stages"].get(stage, char_data["stages"]["初期"])["system"]
+        base_system_prompt = char_data["stages"].get(stage, char_data["stages"]["初期"])["system"]
         
+        # --- ここから修正 ---
+        # 動作描写と返信の長さを制御する指示を追加
+        control_instructions = (
+            "返信には、動作の描写（例: 「私は頷きながら」「彼は微笑んで」など）を含めないでください。\n"
+            "返信の長さは、通常の半分程度に短くしてください。簡潔にまとめてください。"
+        )
+        system_prompt = f"{base_system_prompt}\n\n{control_instructions}"
+        # --- 修正ここまで ---
+
         # chat履歴を初期化してGeminiに送信
         convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
@@ -235,6 +244,7 @@ except ImportError:
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
 # --- STAGE_RULESの定義ここまで ---
+
 
 
 
