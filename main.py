@@ -57,7 +57,9 @@ def write_log(sheet, data):
 def update_status(status_sheet, uid, char_key):
     try:
         records = status_sheet.get_all_records()
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        # タイムゾーンを日本時間(JST)に設定
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        today = datetime.datetime.now(jst).strftime("%Y-%m-%d")
         
         app.logger.info(f"--- update_status開始 --- UID: '{uid}', Char: '{char_key}', Today: '{today}'")
         
@@ -183,7 +185,9 @@ def chat():
         
         sheet, status_sheet = get_gsheet()
         if sheet and status_sheet:
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # タイムゾーンを日本時間(JST)に設定
+            jst = datetime.timezone(datetime.timedelta(hours=9))
+            timestamp = datetime.datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
             log_data = [timestamp, uid, char_key, user_text, reply]
             write_log(sheet, log_data)
             update_status(status_sheet, uid, char_key)
@@ -210,6 +214,7 @@ except ImportError:
         "特別_キラキラ": {"min_gp": 100, "condition": "後期ステージ到達、かつGP100以上。"},
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
+
 
 
 
