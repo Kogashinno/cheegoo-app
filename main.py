@@ -29,7 +29,8 @@ except Exception as e:
     app.logger.error(f"モデルリストの取得中にエラーが発生しました: {e}")
 app.logger.info("--------------------------------")
 
-model = genai.GenerativeModel(model_name="models/gemini-1.5-pro-latest")
+# モデル名を gemini-1.5-flash-latest に変更
+model = genai.GenerativeModel(model_name="models/gemini-1.5-flash-latest")
 
 
 def get_gsheet():
@@ -178,12 +179,8 @@ def chat():
         convo.send_message(user_text) 
         reply = convo.last.text.strip()
         
-        # --- ここから画像パス生成ロジックを追加 ---
-        # キャラクターキーと現在のステージから画像パスを生成
         img_path = f"static/images/{char_key}/{stage}.gif"
-        # --- 画像パス生成ロジックはここまで ---
-
-        # スプレッドシートへのログ書き込みとステータス更新
+        
         sheet, status_sheet = get_gsheet()
         if sheet and status_sheet:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -191,7 +188,6 @@ def chat():
             write_log(sheet, log_data)
             update_status(status_sheet, uid, char_key)
 
-        # JSONレスポンスに生成した画像パスを追加
         return jsonify({"reply": reply, "img": img_path})
     except Exception as e:
         app.logger.error("全体処理エラー: %s", str(e))
@@ -214,9 +210,6 @@ except ImportError:
         "特別_キラキラ": {"min_gp": 100, "condition": "後期ステージ到達、かつGP100以上。"},
         "特別_固有": {"min_gp": None, "condition": "後期ステージ到達、かつキャラ別条件達成。"}
     }
-
-
-
 
 
 
