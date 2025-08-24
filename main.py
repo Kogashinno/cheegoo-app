@@ -60,7 +60,6 @@ def update_status(status_sheet, uid, char_key):
         
         app.logger.info(f"--- update_status開始 --- UID: '{uid}', Char: '{char_key}', Today: '{today}'")
         
-        # gspreadが読み込んだヘッダー（recordsの最初の要素）をログに出力
         if records:
             app.logger.info(f"--- gspreadが読み込んだヘッダー（records[0]）---: {records[0].keys()}")
         else:
@@ -77,7 +76,6 @@ def update_status(status_sheet, uid, char_key):
                 user_found = True
                 app.logger.info(f"  ユーザー '{uid}' がシート行 {i} で見つかりました。")
                 
-                # スプレッドシートの列名と対応するPythonのキーを使用し、安全にint変換
                 try:
                     current_gp = int(row.get("GP", 0)) 
                 except ValueError:
@@ -100,14 +98,11 @@ def update_status(status_sheet, uid, char_key):
                 
                 app.logger.info(f"  既存データ取得: GP={current_gp}, 最終グチ日='{last_grumble_date}', 連続日数={consecutive_grumble_days}, 総グチ数={total_grumble_count}")
                 
-                # GP加算（日付が変わった場合のみ）
                 if last_grumble_date != today:
                     app.logger.info(f"  日付が異なります ('{last_grumble_date}' != '{today}')。GPと連続日数を加算します。")
                     current_gp += 10
                     consecutive_grumble_days += 1 
                     
-                    # 列のインデックスはスプレッドシートの実際の列順に合わせる (1から始まる)
-                    # G列: GP (7), D列: 最終グチ日 (4), E列: グチ連続日数 (5), H列: 最終GP付与日 (8)
                     status_sheet.update_cell(i, 7, current_gp)  # GP列 (G列)
                     status_sheet.update_cell(i, 4, today)      # 最終グチ日列 (D列)
                     status_sheet.update_cell(i, 5, consecutive_grumble_days) # グチ連続日数 (E列)
@@ -115,17 +110,14 @@ def update_status(status_sheet, uid, char_key):
                 else:
                     app.logger.info(f"  日付が同じです ('{last_grumble_date}' == '{today}')。GPと連続日数は加算しません。")
                 
-                total_grumble_count += 1 # 総グチ数は毎回加算
-                status_sheet.update_cell(i, 6, total_grumble_count) # 総グチ数 (F列)
+                total_grumble_count += 1 
+                status_sheet.update_cell(i, 6, total_grumble_count) 
                 app.logger.info(f"  更新後データ: GP={current_gp}, 最終グチ日='{today}', 連続日数={consecutive_grumble_days}, 総グチ数={total_grumble_count}")
                 
                 return 
 
-        # 新規ユーザー
         if not user_found:
             app.logger.info(f"  ユーザー '{uid}' は見つかりませんでした。新規ユーザーとして追加します。")
-            # スプレッドシートの列順に合わせてデータを追加
-            # 列: uid (A), char_key (B), 現在ステージ (C), 最終グチ日 (D), グチ連続日数 (E), 総グチ数 (F), GP (G), 最終GP付与日 (H)
             new_user_data = [
                 uid,                   # A列
                 char_key,              # B列
@@ -156,16 +148,11 @@ def chat():
         uid = data.get("uid", "unknown")
         stage = data.get("stage", "初期") 
 
-        # --- chat関数受信データとchar_keyをログ出力 ---
         app.logger.info(f"--- chat関数受信データ ---: {data}")
         app.logger.info(f"--- chat関数 char_key ---: '{char_key}'")
-        # --- ログ出力ここまで ---
 
         user_text = "".join(user_text.split()) 
         
-        app.logger.info(f"--- 受信したuser_text ---: '{user_text}' (長さ: {len(user_text)})")
-        app.logger.info(f"--- 処理後のuser_text ---: '{user_text}' (長さ: {len(user_text)})")
-
         if not user_text: 
             return jsonify({"reply": "何か入力してください。"})
 
@@ -183,9 +170,20 @@ def chat():
 
         convo = model.start_chat(history=[])
         convo.send_message(system_prompt)
+        
+        app.logger.info(f"--- API呼び出し前 ---")
+        app.logger.info(f"  システムプロンプト: {system_prompt[:50]}...")
+        app.logger.info(f"  ユーザー入力: {user_text}")
+        
         convo.send_message(user_text) 
         reply = convo.last.text.strip()
+        
+        # --- ここから画像パス生成ロジックを追加 ---
+        # キャラクターキーと現在のステージから画像パスを生成
+        img_path = f"static/images/{char_key}/{stage}.gif"
+        # --- 画像パス生成ロジックはここまで ---
 
+        # スプレッドシートへのログ書き込みとステータス更新
         sheet, status_sheet = get_gsheet()
         if sheet and status_sheet:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -193,7 +191,8 @@ def chat():
             write_log(sheet, log_data)
             update_status(status_sheet, uid, char_key)
 
-        return jsonify({"reply": reply})
+        # JSONレスポンスに生成した画像パスを追加
+        return jsonify({"reply": reply, "img": img_path})
     except Exception as e:
         app.logger.error("全体処理エラー: %s", str(e))
         traceback.print_exc()
